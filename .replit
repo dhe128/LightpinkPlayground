@@ -1,7 +1,7 @@
-run = "npm run dev"
+run = "pnpm run dev"
 entrypoint = "index.js"
 modules = ["nodejs-20:v9-20231020-a3526c9"]
-hidden = [".config", "package-lock.json", ".next", ".swc"]
+hidden = [".config", "pnpm-lock.yaml", ".next", ".swc"]
 
 [nix]
 channel = "stable-23_05"
@@ -10,10 +10,13 @@ channel = "stable-23_05"
 NEXT_TELEMETRY_DISABLED = "1"
 
 [deployment]
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+build = ["pnpm", "run", "build"]
+run = ["pnpm", "run", "start"]
 deploymentTarget = "cloudrun"
 
 [[ports]]
 localPort = 3000
 externalPort = 80
+
+[objectStorage]
+defaultBucketID = "replit-objstore-9213153c-7052-46b0-94c9-2a0877108346"

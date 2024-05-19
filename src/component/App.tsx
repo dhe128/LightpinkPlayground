@@ -1,5 +1,7 @@
-import {Stats, Environment, PointerLockControls} from '@react-three/drei'
-import {Canvas} from '@react-three/fiber'
+'use client'
+import {useRef} from 'react'
+import {Canvas, useThree} from '@react-three/fiber'
+import {Environment, Stats} from '@react-three/drei'
 import Game from './Game'
 import Overlay from './Overlay'
 
@@ -20,9 +22,11 @@ export default function App() {
           shadow-camera-top={30}
           shadow-camera-bottom={-30}
         />
-        <Environment files="/img/rustig_koppie_puresky_1k.hdr" background />
+        <Environment
+          files="/environment/rustig_koppie_puresky_1k.hdr"
+          background
+        />
         <Game />
-        <PointerLockControls />
         <Stats />
       </Canvas>
       <Overlay />
