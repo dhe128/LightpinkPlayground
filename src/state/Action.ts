@@ -1,76 +1,62 @@
-import {testAText} from '@/test/testA'
 import {useLightpinkStore} from './LightpinkStore'
-import {supabase} from '@/api/SupabaseBrowser'
-import {Mesh, Vector3} from 'three'
 import {promptToMesh} from './ApiCall'
+import {LightpinkInstance} from './UiSlice'
+import {MeshInstruction, extractLine} from '@/util/Instruction'
+import {imageToCaption} from '@/serverAction/imageToCaption'
+import {textToInstructionsRunpod} from '@/serverAction/textToInstructions'
+import {nullthrows} from '@/util/nullthrows'
+import {getCaption, getInstructionsText} from '@/serverAction/Steps'
 
-export const extractTuple = (s: string) => {
-  const [_, ...parts] = /([\d\.\+\-]+)/.exec(s)
-  return parts.map(part => parseFloat(part))
+export const applyInstruction = async (instruction: MeshInstruction) => {
+  const {addMesh} = useLightpinkStore.getState()
+  const {meshGenId} = await promptToMesh(instruction.prompt)
+  addMesh({
+    meshId: meshGenId,
+    position: instruction.location,
+    scale: instruction.area,
+  })
 }
 
-export const extractLine = (line: string) => {
-  const [_, title, locationStr, areaStr, prompt] =
-    /^\d+\.\s*(.*)Location: (\([\d,\.\-\+]*\))\. Area: (\([\d,\.\-\+]*\))\. (.*)$/.exec(
-      line,
-    )
-
-  return {
-    title,
-    prompt,
-    location: new Vector3(...extractTuple(locationStr)),
-    area: new Vector3(...extractTuple(areaStr)),
-  }
+export const initializeApp = async (instance: LightpinkInstance) => {
+  useLightpinkStore.setState(state => {
+    state.instance = instance
+  })
+  await useLightpinkStore.persist.rehydrate()
 }
 
-export type ObjectSpec = {
-  title: string
-  prompt: string
-  location: Vector3
-  area: Vector3
+export const runStep1 = async () => {
+  const instance = useLightpinkStore.getState().instance
+  const {canvas} = useLightpinkStore.getState().refs
+  const dataUrl = canvas.toDataURL('image/png')
+  const caption = await imageToCaption(instance, dataUrl)
+  console.info(
+    `${instance.timeline}.${instance.iteration}.step1 result: ${caption}`,
+  )
 }
 
-export const applySpec = async (spec: ObjectSpec) => {
-  const mesh: Mesh = await promptToMesh(spec.prompt)
-  placeMeshInScene(mesh, spec.location, spec.area)
+const makeStep2Prompt = (caption: string) =>
+  `I have a cube canvas of size 10x10x10 with axes xyz. I want to build a nice backyard. The canvas already contains the following objects: ${caption}. Please give me a list of the objects I should place along with their coordinates, sizes and detailed description. Please use the following format:\n 1. Object 1 with description. Location: (x, y, z). Area: (x, y, z) \n 2. Object 2 ...`
+
+export const runStep2 = async () => {
+  const instance = useLightpinkStore.getState().instance
+  const caption = nullthrows(await getCaption(instance))
+  const instructionsText = await textToInstructionsRunpod(
+    instance,
+    makeStep2Prompt(caption),
+  )
+  console.info(
+    `${instance.timeline}.${instance.iteration}.step2 result: ${instructionsText}`,
+  )
 }
 
-export const placeMeshInScene = (
-  mesh: Mesh,
-  position: Vector3 = new Vector3(),
-  size?: Vector3,
-) => {
-  const {
-    refs: {meshGroup},
-  } = useLightpinkStore.getState()
-  mesh.position.copy(position)
+export const runStep3 = async () => {
+  const instance = useLightpinkStore.getState().instance
+  const instructionsText = nullthrows(await getInstructionsText(instance))
+  const instructions = instructionsText.split('\n').map(extractLine)
+  const {length} = await Promise.all(instructions.map(applyInstruction))
 
-  if (size) {
-    const {geometry} = mesh
-    geometry.computeBoundingBox()
-    mesh.scale.multiply(size).divide(geometry.boundingBox.max)
-  }
-  meshGroup.add(mesh)
-}
-
-export const applyChangesFromResponse = (text: string) => {
-  const specs = text.split('\n').map(extractLine)
-  for (const spec of specs) {
-    applySpec(spec)
-  }
-}
-
-export const saveScreenshot = () => {
-  const {canvas} = useLightpinkStore(state => state.refs)
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.style.display = 'none'
-    link.href = url
-    link.download = 'screenshot.png'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }, 'image/png')
+  useLightpinkStore.getState().advanceIteration()
+  console.info(
+    `${instance.timeline}.${instance.iteration}.step3 complete. ${length} meshes added.`,
+  )
 }

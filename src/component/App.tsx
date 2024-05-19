@@ -1,14 +1,24 @@
 'use client'
-import {useRef} from 'react'
-import {Canvas, useThree} from '@react-three/fiber'
+import {useEffect} from 'react'
+import {Canvas} from '@react-three/fiber'
 import {Environment, Stats} from '@react-three/drei'
 import Game from './Game'
 import Overlay from './Overlay'
+import {LightpinkInstance} from '@/state/UiSlice'
+import {initializeApp} from '@/state/Action'
 
-export default function App() {
+export default function App({
+  initialInstance,
+}: {
+  initialInstance: LightpinkInstance
+}) {
+  useEffect(() => {
+    initializeApp(initialInstance)
+  }, [initializeApp, initialInstance])
+
   return (
     <>
-      <Canvas shadows>
+      <Canvas shadows gl={{preserveDrawingBuffer: true}}>
         <directionalLight
           intensity={1}
           castShadow={true}

@@ -1,9 +1,8 @@
 import {assetHubApi} from '@/api/AssetHubApi'
 import {Mesh} from 'three'
-import Replicate from 'replicate'
 import {fetchMeshByUrl} from './Fetch'
 import {promptToMeshUrl} from '@/serverAction/promptToMeshUrl'
-import {RunpodRunsyncResponse, runpodApi} from '@/api/RunpodApi'
+import {useLightpinkStore} from './LightpinkStore'
 
 export type StartDraftsProps = {
   images: File[]
@@ -40,8 +39,16 @@ export const startConvert = async (props: StartDraftsProps) => {
     .then(response => response.data)
 }
 
-export const promptToMesh = async (prompt: string): Promise<Mesh> => {
-  const url = await promptToMeshUrl(prompt)
-  console.log(url)
-  return await fetchMeshByUrl(url)
+export const promptToMesh = async (
+  prompt: string,
+): Promise<{
+  mesh: Mesh
+  meshGenId: string
+}> => {
+  const instance = useLightpinkStore.getState().instance
+  const {meshGenId, url} = await promptToMeshUrl(instance, prompt)
+  return {
+    mesh: await fetchMeshByUrl(url),
+    meshGenId,
+  }
 }

@@ -1,30 +1,31 @@
 'use server'
-
-import {useLightpinkStore} from '@/state/LightpinkStore'
-import knex from 'knex'
+import {LightpinkInstance} from '@/state/UiSlice'
+import {knex} from '@api/Knex'
 import Replicate from 'replicate'
 
 const defaultNegativePrompt =
   'ugly, bad anatomy, blurry, pixelated obscure, unnatural colors, poor lighting, dull, and unclear, cropped, lowres, low quality, artifacts, duplicate, morbid, mutilated, poorly drawn face, deformed, dehydrated, bad proportions'
-export const promptToMeshUrl = async (prompt: string): Promise<string> => {
+export const promptToMeshUrl = async (
+  instance: LightpinkInstance,
+  prompt: string,
+): Promise<{
+  meshGenId: string
+  url: string
+}> => {
   const replicate = new Replicate()
-  const {
-    ui: {timeline, iteration},
-  } = useLightpinkStore.getState()
 
   const input = {
     prompt,
     max_steps: 500,
-    //negative_prompt: defaultNegativePrompt,
+    negative_prompt: defaultNegativePrompt,
   }
 
-  const [meshGenId] = await knex('mesh_gen')
+  const [{id: meshGenId}] = await knex('mesh_gen')
     .insert({
+      ...instance,
       prompt,
       max_steps: input.max_steps,
       negative_prompt: input.negative_prompt,
-      timeline,
-      iteration,
     })
     .returning('id')
 
@@ -35,5 +36,5 @@ export const promptToMeshUrl = async (prompt: string): Promise<string> => {
   await knex('mesh_gen').where('id', meshGenId).update({
     url,
   })
-  return url
+  return {meshGenId, url}
 }

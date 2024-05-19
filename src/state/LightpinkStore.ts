@@ -1,4 +1,4 @@
-import {StateStorage, createJSONStorage, persist} from 'zustand/middleware'
+import {persist} from 'zustand/middleware'
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {devtools} from 'zustand/middleware'
@@ -6,7 +6,7 @@ import {createUiSlice, type UiSlice} from '@/state/UiSlice'
 import {createContextSlice, type ContextSlice} from '@/state/ContextSlice'
 import {createSceneSlice, type SceneSlice} from '@/state/SceneSlice'
 import {PartializePredicate, partializeByPredicate} from './ZustandPersist'
-import knex from 'knex'
+import {asyncStorage} from './AsyncStorage'
 
 export type LightpinkState = ContextSlice & SceneSlice & UiSlice
 
@@ -22,13 +22,13 @@ export const useLightpinkStore = create<LightpinkState>()(
     immer(
       devtools((...a) => ({
         ...createContextSlice(...a),
-        ...createUiSlice(...a),
         ...createSceneSlice(...a),
+        ...createUiSlice(...a),
       })),
     ),
     {
       name: 'AssetHubStore',
-      storage: createJSONStorage(() => storage),
+      storage: asyncStorage,
       partialize: partializeByPredicate(partializePredicate),
       version: 2,
       migrate(persistedState, version) {
@@ -37,41 +37,7 @@ export const useLightpinkStore = create<LightpinkState>()(
         }
         return persistedState
       },
+      skipHydration: true,
     },
   ),
 )
-
-const storage: StateStorage = {
-  getItem: async (name: string): Promise<string | null> => {
-    const {
-      ui: {timeline, iteration},
-    } = useLightpinkStore.getState()
-    const {value} = await knex('scene_state')
-      .where('timeline', timeline)
-      .where('iteration', iteration)
-      .where('name', name)
-      .first()
-    return JSON.stringify(value)
-  },
-  setItem: async (name: string, value: string): Promise<void> => {
-    const {
-      ui: {timeline, iteration},
-    } = useLightpinkStore.getState()
-    await knex('caption_gen').insert({
-      timeline,
-      iteration,
-      name,
-      value: JSON.parse(value),
-    })
-  },
-  removeItem: async (name: string): Promise<void> => {
-    const {
-      ui: {timeline, iteration},
-    } = useLightpinkStore.getState()
-    await knex('scene_state')
-      .where('timeline', timeline)
-      .where('iteration', iteration)
-      .where('name', name)
-      .delete()
-  },
-}

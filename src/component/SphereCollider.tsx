@@ -27,7 +27,6 @@ export default function SphereCollider({
   // const q = useMemo(() => new Quaternion(), [])
 
   useEffect(() => {
-    console.log('adding reference to this sphere collider')
     colliders[id] = {sphere: sphere, velocity: velocity}
     //normalArrowRef.current.setColor(new Color(0xff0000))
     //rotationArrowRef.current.setColor(new Color(0x00ff00))

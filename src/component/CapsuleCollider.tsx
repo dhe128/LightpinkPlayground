@@ -11,7 +11,6 @@ export default function CapsuleCollider({ id, radius, octree, position, collider
   const velocity = useMemo(() => new Vector3(), [])
 
   useEffect(() => {
-    console.log('adding reference to this capsule collider')
     colliders[id] = { capsule: capsule, velocity: velocity }
   }, [colliders, id, capsule, velocity])
 

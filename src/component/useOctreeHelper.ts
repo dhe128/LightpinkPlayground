@@ -6,23 +6,28 @@ import {
   testInstructionGen,
   testMeshGen,
   testCaptionGen,
+  saveScreenshot,
 } from '@/state/TestAction'
-import {saveScreenshot} from '@/state/Action'
+import {runStep1, runStep2, runStep3} from '@/state/Action'
 
 export default function useOctreeHelper(octree) {
   const {scene} = useThree()
   useEffect(() => {
-    console.log('new OctreeHelper')
     const helper = new OctreeHelper(octree, 'hotpink')
     helper.name = 'octreeHelper'
     scene.add(helper)
     return () => {
-      console.log('removing OctreeHelper')
       scene.remove(helper)
     }
   }, [octree, scene])
 
-  useControls('Octree Helper', {
+  useControls('Actions', {
+    runStep1: button(() => runStep1()),
+    runStep2: button(() => runStep2()),
+    runStep3: button(() => runStep3()),
+  })
+
+  useControls('Debug', {
     visible: {
       value: false,
       onChange: v => {

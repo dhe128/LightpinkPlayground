@@ -1,8 +1,7 @@
 import {Group, Vector3} from 'three'
 import type {StateCreator} from 'zustand'
 export type MeshSpec = {
-
-  meshId: number
+  meshId: string
   position: Vector3
   scale: Vector3
 }
